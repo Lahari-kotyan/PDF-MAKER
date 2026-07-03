@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart PDF Generator</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<!-- ─── Toast Container ─────────────────────────────────────────────────── -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- ─── Loading Overlay ─────────────────────────────────────────────────── -->
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="loading-content">
+    <div class="loading-spinner"></div>
+    <p id="loadingText">Generating your PDF...</p>
+  </div>
+</div>
+
+<!-- ─── PDF Preview Modal ───────────────────────────────────────────────── -->
+<div id="previewModal" class="modal hidden">
+  <div class="modal-backdrop" onclick="closePreview()"></div>
+  <div class="modal-content modal-xl">
+    <div class="modal-header">
+      <h3><i class="fas fa-eye"></i> PDF Preview</h3>
+      <div class="modal-actions">
+        <a id="downloadBtn" href="#" class="btn btn-primary btn-sm" download>
+          <i class="fas fa-download"></i> Download PDF
+        </a>
+        <button onclick="closePreview()" class="btn btn-ghost btn-sm">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <iframe id="pdfFrame" src="" title="PDF Preview"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Sidebar ─────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon"><i class="fas fa-file-pdf"></i></div>
+      <div class="logo-text">
+        <span class="logo-name">SmartPDF</span>
+        <span class="logo-tagline">Generator</span>
+      </div>
+    </div>
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <p class="nav-label">Templates</p>
+    <a href="#" class="nav-item active" data-tab="custom" onclick="switchTab('custom', this)">
+      <i class="fas fa-file-alt"></i><span>Custom Document</span>
+    </a>
+    <a href="#" class="nav-item" data-tab="resume" onclick="switchTab('resume', this)">
+      <i class="fas fa-user-tie"></i><span>Resume</span>
+    </a>
+    <a href="#" class="nav-item" data-tab="invoice" onclick="switchTab('invoice', this)">
+      <i class="fas fa-receipt"></i><span>Invoice</span>
+    </a>
+    <a href="#" class="nav-item" data-tab="certificate" onclick="switchTab('certificate', this)">
+      <i class="fas fa-graduation-cap"></i><span>Certificate</span>
+    </a>
+    <a href="#" class="nav-item" data-tab="report" onclick="switchTab('report', this)">
+      <i class="fas fa-chart-bar"></i><span>Business Report</span>
+    </a>
+
+    <p class="nav-label mt">Settings</p>
+    <a href="#" class="nav-item" onclick="toggleTheme(); return false;">
+      <i class="fas fa-moon" id="themeIcon"></i><span id="themeLabel">Light Mode</span>
+    </a>
+    <a href="#" class="nav-item" onclick="window.open('/api/health'); return false;">
+      <i class="fas fa-heartbeat"></i><span>API Status</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <p>Smart PDF Generator v1.0</p>
+    <p>© 2024 All rights reserved</p>
+  </div>
+</aside>
+
+<!-- ─── Main Content ─────────────────────────────────────────────────────── -->
+<main class="main-content" id="mainContent">
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <button class="sidebar-toggle mobile-only" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div>
+        <h1 id="pageTitle">Custom Document</h1>
+        <p id="pageSubtitle" class="header-subtitle">Create a custom PDF with your own content</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-ghost btn-sm" onclick="loadSampleData()">
+        <i class="fas fa-magic"></i> Load Sample
+      </button>
+      <button class="btn btn-primary" onclick="generatePDF()">
+        <i class="fas fa-file-pdf"></i> Generate PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <i class="fas fa-file-pdf stat-icon text-blue"></i>
+      <div><p class="stat-value" id="statTotal">0</p><p class="stat-label">Generated</p></div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-layer-group stat-icon text-purple"></i>
+      <div><p class="stat-value">5</p><p class="stat-label">Templates</p></div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-shield-alt stat-icon text-green"></i>
+      <div><p class="stat-value">Secure</p><p class="stat-label">& Private</p></div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-bolt stat-icon text-yellow"></i>
+      <div><p class="stat-value">&lt;2s</p><p class="stat-label">Generation</p></div>
+    </div>
+  </div>
+
+  <!-- Tab Panels -->
+  <div class="panel-container">
+
+    <!-- ── CUSTOM DOCUMENT ───────────────────────────────────────────────── -->
+    <section class="tab-panel active" id="tab-custom">
+      <div class="form-grid">
+        <div class="card">
+          <div class="card-header"><i class="fas fa-info-circle"></i> Document Info</div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Document Title *</label>
+              <input type="text" id="customTitle" class="form-control" placeholder="My Document Title" />
+            </div>
+            <div class="form-group">
+              <label>Subtitle</label>
+              <input type="text" id="customSubtitle" class="form-control" placeholder="Optional subtitle" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Font Size (px)</label>
+                <input type="number" id="customFontSize" class="form-control" value="12" min="8" max="24" />
+              </div>
+              <div class="form-group">
+                <label>Text Color</label>
+                <input type="color" id="customFontColor" class="form-control form-color" value="#1E293B" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="fas fa-heading"></i> Header & Footer</div>
+          <div class="card-body">
+            <div class="toggle-row">
+              <label class="toggle-label">Enable Header</label>
+              <label class="toggle"><input type="checkbox" id="enableHeader" onchange="toggleSection('headerSection')"><span class="slider"></span></label>
+            </div>
+            <div id="headerSection" class="collapsible hidden">
+              <div class="form-row">
+                <div class="form-group"><label>Left Text</label><input type="text" id="headerLeft" class="form-control" placeholder="Company Name" /></div>
+                <div class="form-group"><label>Right Text</label><input type="text" id="headerRight" class="form-control" placeholder="Confidential" /></div>
+              </div>
+            </div>
+            <div class="toggle-row mt-sm">
+              <label class="toggle-label">Enable Footer</label>
+              <label class="toggle"><input type="checkbox" id="enableFooter" onchange="toggleSection('footerSection')"><span class="slider"></span></label>
+            </div>
+            <div id="footerSection" class="collapsible hidden">
+              <div class="form-row">
+                <div class="form-group"><label>Left Text</label><input type="text" id="footerLeft" class="form-control" placeholder="Confidential" /></div>
+                <div class="form-group"><label>Center Text</label><input type="text" id="footerCenter" class="form-control" placeholder="Your Company © 2024" /></div>
+              </div>
+              <div class="toggle-row mt-sm">
+                <label class="toggle-label">Show Page Numbers</label>
+                <label class="toggle"><input type="checkbox" id="footerPageNums" checked><span class="slider"></span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="fas fa-water"></i> Watermark & QR Code</div>
+          <div class="card-body">
+            <div class="toggle-row">
+              <label class="toggle-label">Enable Watermark</label>
+              <label class="toggle"><input type="checkbox" id="enableWatermark" onchange="toggleSection('watermarkSection')"><span class="slider"></span></label>
+            </div>
+            <div id="watermarkSection" class="collapsible hidden">
+              <div class="form-row">
+                <div class="form-group"><label>Watermark Text</label><input type="text" id="watermarkText" class="form-control" placeholder="CONFIDENTIAL" /></div>
+                <div class="form-group"><label>Color</label><input type="color" id="watermarkColor" class="form-control form-color" value="#CCCCCC" /></div>
+              </div>
+              <div class="form-group">
+                <label>Opacity: <span id="opacityValue">15%</span></label>
+                <input type="range" id="watermarkOpacity" min="5" max="50" value="15" class="form-range" oninput="document.getElementById('opacityValue').textContent=this.value+'%'" />
+              </div>
+            </div>
+            <div class="toggle-row mt-sm">
+              <label class="toggle-label">Add QR Code</label>
+              <label class="toggle"><input type="checkbox" id="enableQR" onchange="toggleSection('qrSection')"><span class="slider"></span></label>
+            </div>
+            <div id="qrSection" class="collapsible hidden">
+              <div class="form-group"><label>QR Code URL / Text</label><input type="text" id="qrText" class="form-control" placeholder="https://yourwebsite.com" /></div>
+              <div class="form-group"><label>QR Label</label><input type="text" id="qrLabel" class="form-control" placeholder="Scan to visit website" /></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header">
+            <span><i class="fas fa-paragraph"></i> Paragraphs</span>
+            <button class="btn btn-sm btn-secondary" onclick="addParagraph()"><i class="fas fa-plus"></i> Add Paragraph</button>
+          </div>
+          <div class="card-body" id="paragraphsContainer">
+            <!-- Paragraphs added dynamically -->
+          </div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header">
+            <span><i class="fas fa-table"></i> Tables</span>
+            <button class="btn btn-sm btn-secondary" onclick="addTable()"><i class="fas fa-plus"></i> Add Table</button>
+          </div>
+          <div class="card-body" id="tablesContainer">
+            <!-- Tables added dynamically -->
+          </div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header"><i class="fas fa-signature"></i> Advanced</div>
+          <div class="card-body">
+            <div class="toggle-row">
+              <label class="toggle-label">Add Signature Placeholder</label>
+              <label class="toggle"><input type="checkbox" id="enableSignature"><span class="slider"></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── RESUME ─────────────────────────────────────────────────────────── -->
+    <section class="tab-panel" id="tab-resume">
+      <div class="form-grid">
+        <div class="card card-full">
+          <div class="card-header"><i class="fas fa-user"></i> Personal Information</div>
+          <div class="card-body">
+            <div class="form-row-3">
+              <div class="form-group"><label>Full Name *</label><input type="text" id="resumeName" class="form-control" placeholder="Alex Johnson" /></div>
+              <div class="form-group"><label>Job Title</label><input type="text" id="resumeTitle" class="form-control" placeholder="Senior Developer" /></div>
+              <div class="form-group"><label>Email</label><input type="email" id="resumeEmail" class="form-control" placeholder="alex@example.com" /></div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group"><label>Phone</label><input type="text" id="resumePhone" class="form-control" placeholder="+1 (555) 000-0000" /></div>
+              <div class="form-group"><label>Location</label><input type="text" id="resumeLocation" class="form-control" placeholder="San Francisco, CA" /></div>
+              <div class="form-group"><label>LinkedIn</label><input type="text" id="resumeLinkedin" class="form-control" placeholder="linkedin.com/in/username" /></div>
+            </div>
+            <div class="form-group"><label>Professional Summary</label><textarea id="resumeSummary" class="form-control" rows="3" placeholder="Brief professional summary..."></textarea></div>
+          </div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header"><i class="fas fa-tools"></i> Skills (comma separated)</div>
+          <div class="card-body">
+            <textarea id="resumeSkills" class="form-control" rows="3" placeholder="JavaScript, React, Node.js, Python, AWS..."></textarea>
+          </div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header">
+            <span><i class="fas fa-briefcase"></i> Work Experience</span>
+            <button class="btn btn-sm btn-secondary" onclick="addExperience()"><i class="fas fa-plus"></i> Add</button>
+          </div>
+          <div class="card-body" id="experienceContainer"></div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header">
+            <span><i class="fas fa-university"></i> Education</span>
+            <button class="btn btn-sm btn-secondary" onclick="addEducation()"><i class="fas fa-plus"></i> Add</button>
+          </div>
+          <div class="card-body" id="educationContainer"></div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header">
+            <span><i class="fas fa-code"></i> Projects</span>
+            <button class="btn btn-sm btn-secondary" onclick="addProject()"><i class="fas fa-plus"></i> Add</button>
+          </div>
+          <div class="card-body" id="projectsContainer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── INVOICE ─────────────────────────────────────────────────────────── -->
+    <section class="tab-panel" id="tab-invoice">
+      <div class="form-grid">
+        <div class="card">
+          <div class="card-header"><i class="fas fa-building"></i> Your Company</div>
+          <div class="card-body">
+            <div class="form-group"><label>Company Name</label><input type="text" id="companyName" class="form-control" placeholder="Acme Solutions Ltd." /></div>
+            <div class="form-group"><label>Address</label><input type="text" id="companyAddress" class="form-control" placeholder="123 Business Ave" /></div>
+            <div class="form-row">
+              <div class="form-group"><label>Email</label><input type="email" id="companyEmail" class="form-control" placeholder="billing@company.com" /></div>
+              <div class="form-group"><label>Phone</label><input type="text" id="companyPhone" class="form-control" placeholder="+1 (800) 555-0100" /></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="fas fa-user-circle"></i> Client Details</div>
+          <div class="card-body">
+            <div class="form-group"><label>Client Name</label><input type="text" id="clientName" class="form-control" placeholder="Globex Corporation" /></div>
+            <div class="form-group"><label>Address</label><input type="text" id="clientAddress" class="form-control" placeholder="456 Corporate Blvd" /></div>
+            <div class="form-row">
+              <div class="form-group"><label>Email</label><input type="email" id="clientEmail" class="form-control" placeholder="accounts@client.com" /></div>
+              <div class="form-group"><label>Phone</label><input type="text" id="clientPhone" class="form-control" placeholder="+1 (312) 555-0200" /></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="fas fa-file-invoice"></i> Invoice Details</div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group"><label>Invoice Number</label><input type="text" id="invoiceNumber" class="form-control" placeholder="INV-001" /></div>
+              <div class="form-group"><label>Tax Rate (%)</label><input type="number" id="taxRate" class="form-control" value="8.5" min="0" max="100" step="0.5" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Issue Date</label><input type="date" id="invoiceDate" class="form-control" /></div>
+              <div class="form-group"><label>Due Date</label><input type="date" id="invoiceDueDate" class="form-control" /></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="fas fa-qrcode"></i> QR Code & Notes</div>
+          <div class="card-body">
+            <div class="form-group"><label>Payment QR URL</label><input type="text" id="invoiceQrText" class="form-control" placeholder="https://pay.yourcompany.com/inv/001" /></div>
+            <div class="form-group"><label>Notes</label><textarea id="invoiceNotes" class="form-control" rows="3" placeholder="Payment terms, bank details..."></textarea></div>
+          </div>
+        </div>
+
+        <div class="card card-full">
+          <div class="card-header">
+            <span><i class="fas fa-list"></i> Line Items</span>
+            <button class="btn btn-sm btn-secondary" onclick="addInvoiceItem()"><i class="fas fa-plus"></i> Add Item</button>
+          </div>
+          <div class="card-body" id="invoiceItemsContainer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CERTIFICATE ──────────────────────────────────────────────────────── -->
+    <section class="tab-panel" id="tab-certificate">
+      <div class="form-grid">
+        <div class="card card-full">
+          <div class="card-header"><i class="fas fa-award"></i> Certificate Details</div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group"><label>Certificate Title *</label><input type="text" id="certTitle" class="form-control" placeholder="Certificate of Achievement" /></div>
+              <div class="form-group"><label>Recipient Name *</label><input type="text" id="certRecipient" class="form-control" placeholder="John Doe" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Course / Achievement</label><input type="text" id="certCourse" class="form-control" placeholder="Advanced Web Development" /></div>
+              <div class="form-group"><label>Issuing Authority</label><input type="text" id="certIssuer" class="form-control" placeholder="Dr. Jane Smith" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Date of Issue</label><input type="date" id="certDate" class="form-control" /></div>
+              <div class="form-group"><label>Verification QR URL</label><input type="text" id="certQrText" class="form-control" placeholder="https://verify.org/cert/ABC123" /></div>
+            </div>
+            <div class="form-group"><label>Description</label><textarea id="certDescription" class="form-control" rows="3" placeholder="For successfully completing..."></textarea></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── REPORT ───────────────────────────────────────────────────────────── -->
+    <section class="tab-panel" id="tab-report">
+      <div class="form-grid">
+        <div class="card">
+          <div class="card-header"><i class="fas fa-file-alt"></i> Report Details</div>
+          <div class="card-body">
+            <div class="form-group"><label>Report Title *</label><input type="text" id="reportTitle" class="form-control" placeholder="Q4 Business Performance Report" /></div>
+            <div class="form-group"><label>Subtitle</label><input type="text" id="reportSubtitle" class="form-control" placeholder="Executive Summary & Strategic Analysis" /></div>
+            <div class="form-row">
+              <div class="form-group"><label>Author</label><input type="text" id="reportAuthor" class="form-control" placeholder="Analytics Team" /></div>
+              <div class="form-group"><label>Date</label><input type="date" id="reportDate" class="form-control" /></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="fas fa-water"></i> Report Options</div>
+          <div class="card-body">
+            <div class="toggle-row">
+              <label class="toggle-label">Confidential Watermark</label>
+              <label class="toggle"><input type="checkbox" id="reportWatermark"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row mt-sm">
+              <label class="toggle-label">Add QR Code</label>
+              <label class="toggle"><input type="checkbox" id="reportQR" onchange="toggleSection('reportQrSection')"><span class="slider"></span></label>
+            </div>
+            <div id="reportQrSection" class="collapsible hidden">
+              <div class="form-group mt-sm"><label>QR URL</label><input type="text" id="reportQrText" class="form-control" placeholder="https://yourreport.com" /></div>
+            </div>
+          </div>
+        </div>
+        <div class="card card-full">
+          <div class="card-header">
+            <span><i class="fas fa-list-ul"></i> Report Sections</span>
+            <button class="btn btn-sm btn-secondary" onclick="addReportSection()"><i class="fas fa-plus"></i> Add Section</button>
+          </div>
+          <div class="card-body" id="reportSectionsContainer"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Generate Button (fixed bottom) -->
+  <div class="bottom-bar">
+    <button class="btn btn-ghost" onclick="loadSampleData()"><i class="fas fa-magic"></i> Load Sample Data</button>
+    <button class="btn btn-primary btn-lg" onclick="generatePDF()">
+      <i class="fas fa-file-pdf"></i> Generate & Preview PDF
+    </button>
+  </div>
+</main>
+
+<script src="js/app.js"></script>
+</body>
+</html>
